@@ -38,16 +38,20 @@ import java.util.concurrent.TimeUnit;
 public class App {
     // EDIT POINT
     //=========================================================
-    // String START_URL = "http://coffeescript.org/";
-    // String PRE_NAME  = "http://coffeescript.org/";
+    final boolean USE_PROXY = false;
+    final int MAX_CACPURE = 5;
+    final boolean IGNORE_FRAGMENT = true; 
+    // final boolean IGNORE_FRAGMENT = false;  // when rafhaep, documentation 
+
+    // String START_URL = "http://raphaeljs.com/";
+    String START_URL = "http://coffeescript.org/";
     // String START_URL = "http://www.sinatrarb.com/";
-    // String PRE_NAME  = "http://www.sinatrarb.com/";
     // String START_URL = "http://www.google.co.jp/";
-    // String PRE_NAME  = "http://www.google.co.jp/";
-
-    String START_URL = "https://github.com/katoy/CaptureSite";
-    String PRE_NAME  = "https://github.com/katoy/CaptureSite";
-
+    // String START_URL = "https://github.com/katoy/CaptureSite";
+    // String START_URL = "http://www.youtube.com/results?search_query=%E8%A5%BF%E6%9D%91%E7%94%B1%E8%B5%B7%E6%B1%9F"; // 西村由起江
+ 
+    String PRE_NAME  = START_URL;
+   
     protected java.util.HashSet<String> alreadyListed;
     protected java.util.HashSet<URL> alreadyListedURL;
     protected java.util.Queue<String> queue;
@@ -58,64 +62,65 @@ public class App {
     
     public static void main(String[] args) {
 	App app = new App();
-	app.sub();
+	app.capture();
     }
-    
-    
-    public void sub() {
-	
+        
+    public void capture() {	
 	// See http://www.viaboxxsystems.de/start-your-webtests-with-selenium2-maven-testng-now
-	//Proxy myProxy = new Proxy();
-	//myProxy.setHttpProxy("proxy:80");
-	
-	//FirefoxProfile myProfile = new FirefoxProfile();
-	//myProfile.setProxyPreferences(myProxy);
-	
-	// Create a new instance of the Firefox driver
-	// Notice that the remainder of the code relies on the interface, 
-	// not the implementation.
-	// this.driver = new FirefoxDriver(myProfile);  // new FirefoxDriver();
-	
-	// ======== firefox
-	// cd /Applications/Firefox.app/Contents/MacOS
-	// ditto --arch i386 firefox-bin  firefox-bin-x
-	System.setProperty("webdriver.firefox.bin",
-			   "/Applications/Firefox.app/Contents/MacOS/firefox-bin-x");
-	this.driver = new FirefoxDriver();
+	if (USE_PROXY) {
+	    //Proxy myProxy = new Proxy();
+	    //myProxy.setHttpProxy("proxy:80");
+	    //FirefoxProfile myProfile = new FirefoxProfile();
+	    //myProfile.setProxyPreferences(myProxy);	
+
+	    // Create a new instance of the Firefox driver
+	    // Notice that the remainder of the code relies on the interface, 
+	    // not the implementation.
+	    // this.driver = new FirefoxDriver(myProfile);  // new FirefoxDriver();
+	} else {	    
+	    // ======== firefox
+	    // cd /Applications/Firefox.app/Contents/MacOS
+	    // ditto --arch i386 firefox-bin  firefox-bin-x
+	    //System.setProperty("webdriver.firefox.bin",
+	    //		       "/Applications/Firefox.app/Contents/MacOS/firefox-bin-x");
+	    // this.driver = new FirefoxDriver();
+	}
 	
 	// ========= chreome
-	//System.setProperty("webdriver.chrome.driver", 
-	//		   "/Users/youichikato/github/CaptureSites/driver/chromedriver");
-	//this.driver = new ChromeDriver();
+	System.setProperty("webdriver.chrome.driver", 
+			   "/Users/youichikato/github/CaptureSites/driver/chromedriver");
+	this.driver = new ChromeDriver();
 	
 	// ========= safari
 	// this.driver = new SafariDriver();
 	
-	this.driver.manage().timeouts().implicitlyWait(20, TimeUnit.SECONDS);
-	this.selenium = new WebDriverBackedSelenium(this.driver, "");
-	this.selenium.setSpeed("2000");
-	
-	this.alreadyListed = new java.util.HashSet<String>();
-	this.alreadyListedURL = new java.util.HashSet<URL>();
-	this.queue = new java.util.LinkedList<String>();
-	this.screens = new java.util.ArrayList<String[]>();
-	
-	crawl(START_URL);
-	
-	//Close the browser
-	driver.quit();
+	try {
+	    this.driver.manage().timeouts().implicitlyWait(20, TimeUnit.SECONDS);
+	    this.selenium = new WebDriverBackedSelenium(this.driver, "");
+	    this.selenium.setSpeed("2000");
+	    
+	    this.alreadyListed = new java.util.HashSet<String>();
+	    this.alreadyListedURL = new java.util.HashSet<URL>();
+	    this.queue = new java.util.LinkedList<String>();
+	    this.screens = new java.util.ArrayList<String[]>();
+	    
+	    crawl(START_URL);
+	} catch (Exception e) {
+	    e.printStackTrace();
+	    System.out.println(e);	    
+	} finally {
+	    if (this.driver != null) {		
+		//Close the browser
+		this.driver.quit();
+	    }
+	}
     }
     
-    public void crawl(String startingUrl) {
+    public void crawl(String startingUrl) throws Exception {
 	
 	this.alreadyListed.add(startingUrl);
 	this.queue.add(startingUrl);
-	try {
-	     this.alreadyListedURL.add(new URL(startingUrl));
-	} catch (Exception e) {
-	    e.printStackTrace();
-	    System.out.println(e);
-	}
+	this.alreadyListedURL.add(new URL(startingUrl));
 	
 	String newAddress;
 	while ((newAddress = this.queue.poll())!=null) {
@@ -128,23 +133,29 @@ public class App {
 		e.printStackTrace();
 		System.out.println(e);
 	    }
+
+	    if (this.screenID >= MAX_CACPURE) {
+		break;
+	    }
 	}
 
+	FileWriter filewriter = null;
 	try {
-	    FileWriter filewriter = new FileWriter("./screens/00-list.txt");
+	    filewriter = new FileWriter("./screens/00-list.txt");
 	    java.util.Iterator it = this.screens.iterator();
 	    while (it.hasNext()) {
 		String[] val = (String[])(it.next());
 		filewriter.write(val[1] + ": " + val[0] + "\n");
 	    }
-	    filewriter.close();
 	} catch(IOException e) {
-	    e.printStackTrace();
-	    System.out.println(e);
+	    throw e;	    
+	} finally {
+	    if (filewriter != null) {
+		filewriter.close();
+	    }	    
 	}
     }
 
-    
     protected void processPage(String urlStr) throws Exception {
 	URL url = new URL(urlStr);
 	URLConnection connection = url.openConnection();
@@ -188,10 +199,10 @@ public class App {
 	}
 
 	// google
-	if (href.startsWith("http://www.google.co.jp/news")) {
+	if (href.startsWith("http://www.google.co.jp/news/")) {
 	    return false;
 	}
-	if (href.startsWith("http://www.google.co.jp/")) {
+	if (href.startsWith("http://www.google.co.jp/products/")) {
 	    return false;
 	}
 
@@ -200,17 +211,20 @@ public class App {
 	    return false;
 	}
 
+	// rapahel
+	if (IGNORE_FRAGMENT && isSamed(new URL(href))) {
+	    return false;
+	}
 
-	if (href.indexOf("/reference.html") >= 0) {
+	// youtube
+	if (href.indexOf("&search_filter=") > 0) {
 	    return false;
 	}
-	if (isSamed(new URL(href))) {
-	    return false;
-	}
+
 	return true;
     }
 
-    // #name �Υե饰���Ȥ�̵�뤷�����Ƚ�ꤹ�롣
+    // #name のフラグメントを無視して比較判定する。
     protected boolean isSamed(URL url) throws Exception {
         java.util.Iterator it = this.alreadyListedURL.iterator();
         while (it.hasNext()) {
@@ -221,20 +235,14 @@ public class App {
 	return false;
     }
 
-    // �����꡼�󥷥�åȤ���¸���롣
-    private void save_page(String url) {
+    // スクリーンショットを保存する。
+    private void save_page(String url)  throws Exception {
 	String name = String.format("./screens/test-%05d.png", screenID);
 	String[] val = {url, name};
 	screens.add(this.screenID, val);
 	this.screenID += 1;
 
-        try {
-	  File srcFile = ((TakesScreenshot)this.driver).getScreenshotAs(OutputType.FILE);
-	  FileUtils.copyFile(srcFile, new File(name));
-        } catch (IOException e) {
-	    e.printStackTrace();
-            System.out.println(e);
-        }
+	File srcFile = ((TakesScreenshot)this.driver).getScreenshotAs(OutputType.FILE);
+	FileUtils.copyFile(srcFile, new File(name));
     }
 }
-
